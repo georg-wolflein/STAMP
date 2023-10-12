@@ -2,14 +2,14 @@ import sys
 import argparse
 from pathlib import Path
 import os
-
 import pandas as pd
 from matplotlib import pyplot as plt
-from marugoto.stats.categorical import categorical_aggregated_
-from marugoto.visualizations.roc import plot_multiple_decorated_roc_curves, plot_single_decorated_roc_curve
-from marugoto.visualizations.prc import plot_precision_recall_curves_, plot_single_decorated_prc_curve
 
-def add_roc_curve_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+from .marugoto.stats.categorical import categorical_aggregated_
+from .marugoto.visualizations.roc import plot_multiple_decorated_roc_curves, plot_single_decorated_roc_curve
+from .marugoto.visualizations.prc import plot_precision_recall_curves_, plot_single_decorated_prc_curve
+
+def _add_options(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument(
         "pred_csvs",
         metavar="PREDS_CSV",
@@ -79,11 +79,7 @@ def read_table(file) -> pd.DataFrame:
     else:
         return pd.read_csv(file)
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Create a ROC Curve.")
-    args = (add_roc_curve_args(parser)).parse_args()
-
+def roc_curve(args: argparse.Namespace) -> None:
     # read all the patient preds
     # and transform their true / preds columns into np arrays
     preds_dfs = [
@@ -157,3 +153,17 @@ if __name__ == "__main__":
     categorical_aggregated_(args.pred_csvs,
                             target_label=args.target_label,
                             outpath=stats_dir)
+    
+def add_commands(subparsers):
+    # add ROC command
+    roc_parser = subparsers.add_parser("roc", description="Create ROC curve for predictions")
+    _add_options(roc_parser)
+    return {
+        "roc": roc_curve
+    }
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Create a ROC Curve.")
+    args = _add_options(parser).parse_args()
+
+    roc_curve(args)

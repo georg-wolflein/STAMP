@@ -8,55 +8,31 @@ __email__ = "omar.el_nahhas@tu-dresden.de"
 
 import argparse
 from pathlib import Path
-import logging
-import os
-import openslide
-from tqdm import tqdm
-import PIL
-import cv2
-import time
-from datetime import timedelta
-from pathlib import Path
-import torch
-from .helpers import stainNorm_Macenko
-from .helpers.common import supported_extensions
-from .helpers.concurrent_canny_rejection import reject_background
-from .helpers.loading_slides import process_slide_jpg, load_slide, get_raw_tile_list
-from .helpers.feature_extractors import FeatureExtractor, extract_features_
-from .helpers.exceptions import MPPExtractionError
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Normalise WSI directly.')
-
-    parser.add_argument('-o', '--output-path', type=Path, required=True,
-                        help='Path to save features to.')
-    parser.add_argument('--wsi-dir', metavar='DIR', type=Path, required=True,
-                        help='Path of where the whole-slide images are.')
-    parser.add_argument('-m', '--model', metavar='DIR', type=Path, required=True,
-                        help='Path of where model for the feature extractor is.')
-    parser.add_argument('--cache-dir', type=Path, required=True, default=None,
-        help='Directory to store resulting slide JPGs.')
-    
-    parser.add_argument('--patch-size', type=int, default=224,
-                        help='Size of the square patch to tessellate.')
-    parser.add_argument('--mpp', type=float, default=256/224,
-                    help='Microns-per-pixel value for slide resolution.')
-    parser.add_argument('-c', '--cores', type=int, default=8,
-                    help='CPU cores to use, 8 default.')
-    parser.add_argument('-n','--norm', action='store_true')
-    parser.add_argument('--no-norm', dest='norm', action='store_false')
-    parser.set_defaults(norm=True)
-    parser.add_argument('-d', '--del-slide', action='store_true', default=False,
-                         help='Removing the original slide after processing.')
-    parser.add_argument('--only-fex', action='store_true', default=False)
-
-    args = parser.parse_args()
 
 
-PIL.Image.MAX_IMAGE_PIXELS = None
+def preprocess(args: argparse.Namespace):
+    # Keep imports here to avoid loading them when calling other commands
+    import logging
+    import os
+    import openslide
+    from tqdm import tqdm
+    import PIL
+    import cv2
+    import time
+    from datetime import timedelta
+    from pathlib import Path
+    import torch
 
-if __name__ == "__main__":
+    from .helpers import stainNorm_Macenko
+    from .helpers.common import supported_extensions
+    from .helpers.concurrent_canny_rejection import reject_background
+    from .helpers.loading_slides import process_slide_jpg, load_slide, get_raw_tile_list
+    from .helpers.feature_extractors import FeatureExtractor, extract_features_
+    from .helpers.exceptions import MPPExtractionError
+
+
+    PIL.Image.MAX_IMAGE_PIXELS = None
+
     ### START INITIALIZATION
     print(f"Current working directory: {os.getcwd()}")
     Path(args.cache_dir).mkdir(exist_ok=True, parents=True)
@@ -215,3 +191,43 @@ if __name__ == "__main__":
                 os.remove(str(slide_url))
 
     print(f"--- End-to-end processing time of {len(img_dir)} slides: {str(timedelta(seconds=(time.time() - total_start_time)))} ---")
+
+def _add_options(parser: argparse.ArgumentParser):
+    parser.add_argument('-o', '--output-path', type=Path, required=True,
+                        help='Path to save features to.')
+    parser.add_argument('--wsi-dir', metavar='DIR', type=Path, required=True,
+                        help='Path of where the whole-slide images are.')
+    parser.add_argument('-m', '--model', metavar='DIR', type=Path, required=True,
+                        help='Path of where model for the feature extractor is.')
+    parser.add_argument('--cache-dir', type=Path, required=True,
+        help='Directory to store resulting slide JPGs.')
+    
+    parser.add_argument('--patch-size', type=int, default=224,
+                        help='Size of the square patch to tessellate.')
+    parser.add_argument('--mpp', type=float, default=256/224,
+                    help='Microns-per-pixel value for slide resolution.')
+    parser.add_argument('-c', '--cores', type=int, default=8,
+                    help='CPU cores to use, 8 default.')
+    parser.add_argument('-n','--norm', action='store_true')
+    parser.add_argument('--no-norm', dest='norm', action='store_false')
+    parser.set_defaults(norm=True)
+    parser.add_argument('-d', '--del-slide', action='store_true', default=False,
+                         help='Removing the original slide after processing.')
+    parser.add_argument('--only-fex', action='store_true', default=False)
+
+def add_commands(subparsers):
+    parser = subparsers.add_parser("preprocess", description="Preprocess WSI.")
+    _add_options(parser)
+    return {
+        "preprocess": preprocess,
+    }
+
+def main():
+    parser = argparse.ArgumentParser(description="Preprocess WSI.")
+    _add_options(parser)
+    
+    args = parser.parse_args()
+    preprocess(args)
+
+if __name__=="__main__":
+    main()

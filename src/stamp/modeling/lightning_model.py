@@ -167,11 +167,17 @@ class LitVisionTransformer(lightning.LightningModule):
         batch: tuple[Bags, CoordinatesBatch, BagSizes, EncodedTargets],
         batch_idx: int,
     ) -> Loss:
-        return self._step(
+        device = self.model.device
+        batch = tuple(x.to("cpu") for x in batch)
+        self.model.to("cpu")
+        result = self._step(
             step_name="validation",
             batch=batch,
             batch_idx=batch_idx,
         )
+        batch = tuple(x.to(device) for x in batch)
+        self.model.to(device)
+        return result
 
     def test_step(
         self,

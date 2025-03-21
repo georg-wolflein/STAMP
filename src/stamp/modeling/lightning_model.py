@@ -140,7 +140,7 @@ class LitVisionTransformer(lightning.LightningModule):
 
         if step_name == "validation":
             # TODO this is a bit ugly, we'd like to have `_step` without special cases
-            self.valid_auroc(logits, targets.long().argmax(-1))
+            self.valid_auroc.update(logits, targets.long().argmax(-1))
             self.log(
                 f"{step_name}_auroc",
                 self.valid_auroc,

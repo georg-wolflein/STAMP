@@ -131,7 +131,7 @@ class LitVisionTransformer(lightning.LightningModule):
 
         self.log(
             f"{step_name}_loss",
-            loss.detach(),
+            loss,
             on_step=False,
             on_epoch=True,
             prog_bar=True,
@@ -140,7 +140,7 @@ class LitVisionTransformer(lightning.LightningModule):
 
         if step_name == "validation":
             # TODO this is a bit ugly, we'd like to have `_step` without special cases
-            self.valid_auroc(logits.detach(), targets.long().argmax(-1).detach())
+            self.valid_auroc(logits, targets.long().argmax(-1))
             self.log(
                 f"{step_name}_auroc",
                 self.valid_auroc,
